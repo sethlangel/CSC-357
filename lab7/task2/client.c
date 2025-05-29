@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define PORT 10170
 
@@ -11,6 +12,12 @@
 #define SERVER_ARG_IDX 1
 
 #define USAGE_STRING "usage: %s <server address>\n"
+
+int running = 1;
+
+void signal_handler(int signum){
+	running = 0;
+}
 
 void validate_arguments(int argc, char *argv[])
 {
@@ -31,26 +38,24 @@ void send_request(int fd)
    char *line = NULL;
    size_t size;
    ssize_t num;
-
-   if((num = getline(&line, &size, stdin)) >= 0)
-   {
+   
+   if((num = getline(&line, &num, stdin)) >= 0){   
       write(fd, line, num);
    }
 
    free(line);
 }
 
-void receive_response(int fd)
-{
+void recieve_response(int fd){
 	char res[256];
 	ssize_t num;
-
-	if((num = read(fd, res, sizeof(res) - 1)) > -1)
-	{
+	
+	if((num = read(fd, res, sizeof(res) - 1)) > 0){
 		res[num] = '\0';
-		printf("%s", res);
+		printf("From Server: %s", res);
 	}
 }
+
 int connect_to_server(struct hostent *host_entry)
 {
    int fd;
@@ -90,6 +95,7 @@ struct hostent *gethost(char *hostname)
 
 int main(int argc, char *argv[])
 {
+   signal(SIGINT, signal_handler);
    validate_arguments(argc, argv);
    struct hostent *host_entry = gethost(argv[SERVER_ARG_IDX]);
 
@@ -97,11 +103,13 @@ int main(int argc, char *argv[])
    {
       int fd = connect_to_server(host_entry);
       if (fd != -1)
-      {
-         send_request(fd);
-	 receive_response(fd);
-        
-         close(fd);
+      {	 
+	 while(running == 1){
+         	send_request(fd);
+         	recieve_response(fd); 
+	}
+
+	close(fd);
       }
    }
 

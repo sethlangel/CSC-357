@@ -4,6 +4,7 @@
 #include"inode.h"
 
 void changeDirectory(const char *name){
+	//Checks for cd to parent directory. If not continue to see if file name exists in currentInode and that the inode type is a directory.
 	if(strcmp("..", name) == 0){
 		currentInode = inodeList[currentInode].parentInode;
 	}
@@ -32,8 +33,9 @@ void listContents(){
 }
 
 void createDirectory(const char *name){
+	//if a directory name already exists within the currentInode then we can't mkdir
 	for(size_t i = 0; i < inodeCount; i++){
-		if(strcmp(inodeList[i].name, name) == 0 && inodeList[i].type == 'd'){
+		if(strcmp(inodeList[i].name, name) == 0 && inodeList[i].type == 'd' && inodeList[i].parentInode == currentInode){
 			printf("Directory name already exists.\n");
 			return;
 		}
@@ -43,17 +45,18 @@ void createDirectory(const char *name){
 		printf("Inode capacity reached.\n");
 		return;
 	}
-		
+	
 	Inode newInode;
 	newInode.inode = inodeCount;
 	newInode.parentInode = currentInode;
 	newInode.type = 'd';
-	strncpy(newInode.name, name, sizeof(newInode.name - 1));
+	strncpy(newInode.name, name, sizeof(newInode.name) - 1);
 	newInode.name[31] = '\0';
 	
 	inodeList[inodeCount] = newInode;
 	inodeCount++;
 
+	//Converts inode number to string and then the filename buffer is used for the path in the fopen.
 	char filename[5];
 	snprintf(filename, sizeof(filename), "%u", newInode.inode);
 
@@ -69,8 +72,9 @@ void createDirectory(const char *name){
 }
 
 void createFile(const char *name){
+	//Check for file with the same name and if it exists as a child in the currentInode we can't create a file.
 	for(size_t i = 0; i < inodeCount; i++){
-		if(strcmp(inodeList[i].name, name) == 0 && inodeList[i].type == 'f'){
+		if(strcmp(inodeList[i].name, name) == 0 && inodeList[i].type == 'f' && inodeList[i].parentInode == currentInode){
 			printf("File name already exists.\n");
 			return;
 		}
@@ -85,12 +89,13 @@ void createFile(const char *name){
 	newInode.inode = inodeCount;
 	newInode.parentInode = currentInode;
 	newInode.type = 'f';
-	strncpy(newInode.name, name, sizeof(newInode.name - 1));
+	strncpy(newInode.name, name, sizeof(newInode.name) - 1);
 	newInode.name[31] = '\0';
 
 	inodeList[inodeCount] = newInode;
 	inodeCount++;
-
+	
+	//Converts inode number to string and then the filename bufferis used for the path in the fopen.
 	char filename[5];
 	snprintf(filename, sizeof(filename), "%u", newInode.inode);
 
